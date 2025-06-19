@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Planner Zilnic</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-color: #f9f9f9;
+      --text-color: #000;
+      --task-bg: #fff;
+      --accent-color: #0d47a1;
+      --border-color: #ccc;
+    }
+    body.dark {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --task-bg: #1e1e1e;
+      --border-color: #444;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding-top: 80px;
+      transition: background 0.3s, color 0.3s;
+    }
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background-color: var(--accent-color);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+    header h1 {
+      font-size: 22px;
+      margin: 0;
+    }
+    .menu-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .menu-buttons button {
+      background: none;
+      border: none;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+    }
+    .theme-toggle svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+    }
+    main, #dailyPlanSection, #walletSection {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      background: var(--task-bg);
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    h2, h3 {
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 5px;
+    }
+    input, select, button, textarea {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    ul { list-style: none; padding: 0; }
+    li {
+      background: var(--task-bg);
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .reminder {
+      font-size: 0.8em;
+      color: gray;
+    }
+    #dailyPlanSection, #walletSection {
+      display: none;
+    }
+    canvas {
+      max-width: 100%;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Planner Zilnic</h1>
+    <div class="menu-buttons" id="menuButtons" style="display: none;">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Temă">🌗</button>
+      <button onclick="showHome()" title="Acasă">🏠</button>
+      <button onclick="showDailyPlan()" title="Planul zilei">📅</button>
+      <button onclick="showWallet()" title="Portofel">💰</button>
+      <button id="logoutBtn" onclick="logout()" style="display: none;">Logout</button>
+
+    </div>
+    <div id="greetingMessage" style="margin-left: 10px; font-weight: bold;"></div>
+
+  </header>
+
+<section id="authSection">
+  <h2>Bine ai venit!</h2>
+  <p>Autentifică-te sau creează un cont pentru a accesa planner-ul.</p>
+  <input id="authUsername" type="text" placeholder="Utilizator" />
+  <input id="authPassword" type="password" placeholder="Parolă" />
+  <div>
+    <button onclick="login()">Autentificare</button>
+    <button onclick="register()">Creează cont</button>
+  </div>
+</section>
+
+
+  <main id="homeSection">
+    <input type="text" id="taskInput" placeholder="Adaugă o sarcină..." />
+    <select id="taskCategory">
+      <option value="General">General</option>
+      <option value="Muncă">Muncă</option>
+      <option value="Personal">Personal</option>
+    </select>
+    <input type="datetime-local" id="taskReminder" />
+    <button onclick="addTask()">Adaugă</button>
+
+    <h2>Sarcini curente</h2>
+    <ul id="taskList"></ul>
+
+    <h2>Istoric</h2>
+    <ul id="historyList"></ul>
+
+    <h2>Coș de gunoi</h2>
+    <ul id="trashList"></ul>
+  </main>
+
+  <section id="dailyPlanSection">
+    <h2>Planul zilei</h2>
+    <textarea id="userPlanText" placeholder="Scrie-ți planul personal pentru azi..."></textarea>
+    <button onclick="saveUserPlan()">Salvează planul</button>
+    <div id="savedUserPlan"></div>
+    <h3>Sarcinile zilei</h3>
+    <ul id="todayTasks"></ul>
+  </section>
+
+  <section id="walletSection">
+  <h2>Portofel Financiar</h2>
+  <canvas id="financeChart"></canvas>
+  <p><strong>Suma totală:</strong> <span id="totalSum">0</span> lei</p>
+  <p><strong>Cheltuieli cumulative:</strong> <span id="totalExpenses">0</span> lei</p>
+  <p><strong>Datorii curente:</strong> <span id="currentDebt">0</span> lei</p>
+
+  <h3>Introdu date</h3>
+  <input id="incomeInput" type="number" placeholder="Venituri (adaugă)" />
+  <input id="expenseInput" type="number" placeholder="Cheltuieli (scade)" />
+  <input id="debtInput" type="number" placeholder="Datorii (+/-)" />
+  <button onclick="updateFinanceData()">Actualizează graficul</button>
+
+  <h3>Obiectiv Financiar</h3>
+  <img src="https://cdn-icons-png.flaticon.com/512/2331/2331970.png" alt="Portofel" width="60" />
+  <input id="goalInput" type="text" placeholder="Dorința ta financiară (ex: Laptop)" />
+  <input id="goalTarget" type="number" placeholder="Suma necesară" />
+  <input id="goalSaved" type="number" placeholder="Cât ai economisit" />
+  <button onclick="updateGoalChart()">Actualizează progresul</button>
+  <canvas id="goalChart"></canvas>
+</section>
+
+
+  <script>
+    let users = JSON.parse(localStorage.getItem("users") || "{}");
+let currentUser = localStorage.getItem("currentUser");
+
+let tasks = [], history = [], trash = [], userPlan = "";
+
+function saveUserData() {
+  if (currentUser && users[currentUser]) {
+    users[currentUser].tasks = tasks;
+    users[currentUser].history = history;
+    users[currentUser].trash = trash;
+    users[currentUser].userPlan = userPlan;
+    localStorage.setItem("users", JSON.stringify(users));
+  }
+}
+
+    //let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+    //let history = JSON.parse(localStorage.getItem("history") || "[]");
+    //let trash = JSON.parse(localStorage.getItem("trash") || "[]");
+    //let userPlan = localStorage.getItem("userPlan") || "";
+
+    function saveToStorage() {
+      /*localStorage.setItem("tasks", JSON.stringify(tasks));
+      localStorage.setItem("history", JSON.stringify(history));
+      localStorage.setItem("trash", JSON.stringify(trash));
+      localStorage.setItem("userPlan", userPlan);*/
+      saveUserData();
+    }
+    function renderAll() {
+      renderTasks();
+      renderHistory();
+      renderTrash();
+      renderTodayTasks();
+      renderUserPlan();
+    }
+    function addTask() {
+      const text = document.getElementById("taskInput").value;
+      const category = document.getElementById("taskCategory").value;
+      const reminder = document.getElementById("taskReminder").value;
+      if (!text) return;
+      tasks.push({ text, category, reminder, done: false });
+      document.getElementById("taskInput").value = "";
+      document.getElementById("taskReminder").value = "";
+      saveToStorage();
+      renderAll();
+    }
+    function renderTasks() {
+      const list = document.getElementById("taskList");
+      list.innerHTML = "";
+      tasks.forEach((task, i) => {
+        const li = document.createElement("li");
+        li.innerHTML = `${task.text} <span class="reminder">[${task.reminder || "fără dată"}]</span>
+        <div><button onclick="completeTask(${i})">✔️</button>
+        <button onclick="deleteTask(${i})">🗑️</button></div>`;
+        list.appendChild(li);
+      });
+    }
+    function completeTask(i) {
+      tasks[i].done = true;
+      history.push(tasks[i]);
+      tasks.splice(i, 1);
+      saveToStorage();
+      renderAll();
+    }
+    function deleteTask(i) {
+      trash.push(tasks[i]);
+      tasks.splice(i, 1);
+      saveToStorage();
+      renderAll();
+    }
+    function renderHistory() {
+      const list = document.getElementById("historyList");
+      list.innerHTML = "";
+      history.forEach((task, i) => {
+        const li = document.createElement("li");
+        li.innerHTML = `${task.text}
+        <button onclick="restoreFromHistory(${i})">♻️</button>`;
+        list.appendChild(li);
+      });
+    }
+    function restoreFromHistory(i) {
+      tasks.push(history[i]);
+      history.splice(i, 1);
+      saveToStorage();
+      renderAll();
+    }
+    function renderTrash() {
+      const list = document.getElementById("trashList");
+      list.innerHTML = "";
+      trash.forEach((task, i) => {
+        const li = document.createElement("li");
+        li.innerHTML = `${task.text}
+        <button onclick="restoreFromTrash(${i})">♻️</button>
+        <button onclick="trash.splice(${i},1); saveToStorage(); renderAll();">🗑️</button>`;
+        list.appendChild(li);
+      });
+    }
+    function restoreFromTrash(i) {
+      tasks.push(trash[i]);
+      trash.splice(i, 1);
+      saveToStorage();
+      renderAll();
+    }
+    function renderTodayTasks() {
+      const today = new Date().toISOString().split("T")[0];
+      const list = document.getElementById("todayTasks");
+      list.innerHTML = "";
+      tasks.filter(t => t.reminder?.startsWith(today)).forEach(t => {
+        const li = document.createElement("li");
+        li.innerHTML = `${t.text} <span class="reminder">[${t.reminder}]</span>`;
+        list.appendChild(li);
+      });
+    }
+    function renderUserPlan() {
+      document.getElementById("userPlanText").value = "";
+      document.getElementById("savedUserPlan").innerText = userPlan ? "📌 " + userPlan : "";
+    }
+    function saveUserPlan() {
+      userPlan = document.getElementById("userPlanText").value;
+      document.getElementById("userPlanText").value = "";
+      saveToStorage();
+      renderUserPlan();
+    }
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+      const isDark = document.body.classList.contains("dark");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    }
+    function applySavedTheme() {
+      const isDark = localStorage.getItem("theme") === "dark";
+      if (isDark) document.body.classList.add("dark");
+    }
+    function showDailyPlan() {
+      document.getElementById("homeSection").style.display = "none";
+      document.getElementById("walletSection").style.display = "none";
+      document.getElementById("dailyPlanSection").style.display = "block";
+    }
+    function showHome() {
+      document.getElementById("homeSection").style.display = "block";
+      document.getElementById("dailyPlanSection").style.display = "none";
+      document.getElementById("walletSection").style.display = "none";
+    }
+    function showWallet() {
+      document.getElementById("walletSection").style.display = "block";
+      document.getElementById("homeSection").style.display = "none";
+      document.getElementById("dailyPlanSection").style.display = "none";
+    }
+    let goalChart, financeChart;
+    function updateGoalChart() {
+      const goal = document.getElementById("goalInput").value || "Dorință";
+      const target = parseFloat(document.getElementById("goalTarget").value) || 1;
+      const saved = parseFloat(document.getElementById("goalSaved").value) || 0;
+      const data = [saved, Math.max(target - saved, 0)];
+      if (goalChart) goalChart.destroy();
+      goalChart = new Chart(document.getElementById("goalChart"), {
+        type: 'doughnut',
+        data: {
+          labels: ["Economisit", "Rămas"],
+          datasets: [{
+            label: goal,
+            data: data,
+            backgroundColor: ["#4caf50", "#ccc"],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: "Progres pentru " + goal
+            }
+          }
+        }
+      });
+    }
+    let total = parseFloat(localStorage.getItem("totalSum") || "0");
+let totalExpenses = parseFloat(localStorage.getItem("totalExpenses") || "0");
+let currentDebt = parseFloat(localStorage.getItem("currentDebt") || "0");
+
+function updateFinanceData() {
+  const income = parseFloat(document.getElementById("incomeInput").value) || 0;
+  const expenses = parseFloat(document.getElementById("expenseInput").value) || 0;
+  const debtChange = parseFloat(document.getElementById("debtInput").value) || 0;
+
+  total += income;
+  total -= expenses;
+  totalExpenses += expenses;
+  currentDebt += debtChange;
+
+  localStorage.setItem("totalSum", total);
+  localStorage.setItem("totalExpenses", totalExpenses);
+  localStorage.setItem("currentDebt", currentDebt);
+
+  document.getElementById("totalSum").innerText = total.toFixed(2);
+  document.getElementById("totalExpenses").innerText = totalExpenses.toFixed(2);
+  document.getElementById("currentDebt").innerText = currentDebt.toFixed(2);
+
+  if (financeChart) financeChart.destroy();
+  financeChart = new Chart(document.getElementById("financeChart"), {
+    type: 'bar',
+    data: {
+      labels: ["Suma totală", "Cheltuieli cumulative", "Datorii curente"],
+      datasets: [{
+        label: "Statistici financiare",
+        data: [total, totalExpenses, currentDebt],
+        backgroundColor: ["#4caf50", "#f44336", "#ff9800"]
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Analiză Financiară"
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+  // Resetează câmpurile
+  document.getElementById("incomeInput").value = "";
+  document.getElementById("expenseInput").value = "";
+  document.getElementById("debtInput").value = "";
+}
+
+document.getElementById("totalSum").innerText = total.toFixed(2);
+document.getElementById("totalExpenses").innerText = totalExpenses.toFixed(2);
+document.getElementById("currentDebt").innerText = currentDebt.toFixed(2);
+
+    applySavedTheme();
+
+function initApp() {
+  if (currentUser && users[currentUser]) {
+    loadUserData();
+    renderAll();
+    document.getElementById("authSection").style.display = "none";
+    document.getElementById("logoutBtn").style.display = "inline-block";
+    document.getElementById("greetingMessage").textContent = `Salut, ${currentUser}!`;
+    document.getElementById("menuButtons").style.display = "flex";
+
+    showHome();
+  } else {
+    // Ascunde toate secțiunile aplicației dacă nu ești logat
+    document.getElementById("authSection").style.display = "block";
+    document.getElementById("homeSection").style.display = "none";
+    document.getElementById("walletSection").style.display = "none";
+    document.getElementById("dailyPlanSection").style.display = "none";
+    document.getElementById("logoutBtn").style.display = "none";
+    document.getElementById("greetingMessage").textContent = "";
+    document.getElementById("menuButtons").style.display = "none";
+
+  }
+}
+
+initApp();
+
+
+function login() {
+  const user = document.getElementById("authUsername").value;
+  const pass = document.getElementById("authPassword").value;
+
+  if (users[user] && users[user].password === pass) {
+    currentUser = user;
+    localStorage.setItem("currentUser", user);
+    loadUserData();
+    renderAll();
+    initApp();
+  } else {
+    alert("Date invalide!");
+  }
+}
+
+
+function register() {
+  const user = document.getElementById("authUsername").value;
+  const pass = document.getElementById("authPassword").value;
+
+  if (users[user]) {
+    alert("Utilizator deja existent!");
+    return;
+  }
+
+  users[user] = {
+    password: pass,
+    tasks: [],
+    history: [],
+    trash: [],
+    userPlan: ""
+  };
+
+  localStorage.setItem("users", JSON.stringify(users));
+  alert("Cont creat! Te poți autentifica acum.");
+}
+
+
+function logout() {
+  localStorage.removeItem("currentUser");
+  currentUser = null;
+  tasks = [];
+  history = [];
+  trash = [];
+  userPlan = "";
+  initApp();
+}
+
+
+
+function loadUserData() {
+  if (!users[currentUser]) return;
+  tasks = users[currentUser].tasks || [];
+  history = users[currentUser].history || [];
+  trash = users[currentUser].trash || [];
+  userPlan = users[currentUser].userPlan || "";
+  saveToStorage();
+  renderAll();
+}
+
+
+  </script>
+</body>
+</html>
